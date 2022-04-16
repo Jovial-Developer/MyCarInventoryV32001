@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">My Car Inventory</string>
+    <string name="partName">Part Name</string>
+    <string name="partBrand">Part Brand</string>
+    <string name="carMake">Car Make</string>
+    <string name="partModel">Part Model</string>
+    <string name="partPrice">Part Price</string>
 </resources>
