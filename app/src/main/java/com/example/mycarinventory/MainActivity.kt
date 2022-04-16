@@ -1,11 +1,13 @@
 package com.example.mycarinventory
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,9 +23,8 @@ class MainActivity : ComponentActivity() {
             MyCarInventoryTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colors.background
-                ) {
+                    color = MaterialTheme.colors.background,
+                    modifier = Modifier.fillMaxWidth()) {
                     CarPartFacts("Android")
                 }
             }
@@ -44,27 +45,32 @@ fun CarPartFacts(name: String) {
         OutlinedTextField(
             value = carPartName,
             onValueChange = { carPartName = it },
-            label = { Text(stringResource(R.string.partName)) }
+            label = { Text(stringResource(R.string.partName)) },
+            modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = carPartModel,
             onValueChange = { carPartModel = it },
-            label = { Text(stringResource(R.string.partModel)) }
+            label = { Text(stringResource(R.string.partModel)) },
+            modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = carPartBrand,
             onValueChange = { carPartBrand = it },
-            label = { Text(stringResource(R.string.partBrand)) }
+            label = { Text(stringResource(R.string.partBrand)) },
+            modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = carMake,
             onValueChange = { carMake = it },
-            label = { Text(stringResource(R.string.carMake)) }
+            label = { Text(stringResource(R.string.carMake)) },
+            modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
             value = carPartPrice,
             onValueChange = { carPartPrice = it },
-            label = { Text(stringResource(R.string.partPrice)) }
+            label = { Text(stringResource(R.string.partPrice)) },
+            modifier = Modifier.fillMaxWidth()
         )
         Button (
             onClick = {
@@ -76,11 +82,15 @@ fun CarPartFacts(name: String) {
     }
 }
 
-
-@Preview(showBackground = true)
+@Preview(name = "Light Mode", showBackground = true)
+@Preview(uiMode= Configuration.UI_MODE_NIGHT_YES, showBackground = true, name = "Dark Mode")
 @Composable
 fun DefaultPreview() {
     MyCarInventoryTheme {
-        CarPartFacts("Android")
+        Surface(
+            color = MaterialTheme.colors.background,
+            modifier = Modifier.fillMaxWidth()) {
+            CarPartFacts("Android")
+        }
     }
 }
