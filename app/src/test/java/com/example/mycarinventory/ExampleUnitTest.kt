@@ -1,5 +1,6 @@
 package com.example.mycarinventory
 
+import com.example.mycarinventory.dto.Part
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -13,5 +14,11 @@ class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
+    }
+
+    @Test
+    fun confirmNameAlternator_outputNameAlternator(){
+        val part : Part = Part("Alternator", "AV45B20", "ACDelco", "Chevy","250.00")
+        assertEquals("Alternator", part.toString())
     }
 }

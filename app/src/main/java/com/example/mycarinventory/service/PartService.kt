@@ -8,8 +8,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import retrofit2.awaitResponse
 
-class PartService {
-    suspend fun fetchParts() : List<Part>? {
+interface IPartService {
+    suspend fun fetchParts() : List<Part>?
+}
+
+class PartService : IPartService {
+    override suspend fun fetchParts() : List<Part>? {
         return withContext(Dispatchers.IO){
             val service = RetrofitClientInstance.retrofitInstance?.create(IPartDAO::class.java)
             val parts = async {service?.getAllParts()}
