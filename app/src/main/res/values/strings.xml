@@ -5,5 +5,5 @@
     <string name="carMake">Car Make</string>
     <string name="partModel">Part Model</string>
     <string name="partPrice">Part Price</string>
-    <string name="partName">Part Name</string>
+
 </resources>

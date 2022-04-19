@@ -2,6 +2,7 @@ package com.example.mycarinventory
 
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,12 +26,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
 import com.example.mycarinventory.dto.Part
 import com.example.mycarinventory.dto.SpecificCarPart
+import com.example.mycarinventory.dto.User
 import com.example.mycarinventory.ui.theme.MyCarInventoryTheme
+import com.firebase.ui.auth.AuthUI
+import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract
+import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
 
-    private var userPickedPart: SpecificCarPart by mutableStateOf(SpecificCarPart())
+
+    private var fireBaseUser: FirebaseUser? = FirebaseAuth.getInstance().currentUser
     private var selectedPart: Part? = null
     private val viewModel: MainViewModel by viewModel<MainViewModel>()
     private var inPartName: String = ""
@@ -41,6 +49,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             viewModel.fetchParts()
             //temp data
+            fireBaseUser?.let{
+                val user = User(it.uid, "")
+                viewModel.user = user
+            }
             val parts by viewModel.parts.observeAsState(initial = emptyList())
             val specifiedCarPart by viewModel.specifiedCarPart.observeAsState(initial = emptyList())
 
@@ -50,7 +62,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    CarPartFacts("Android", parts, specifiedCarPart, userPickedPart)
+                    CarPartFacts("Android", parts, specifiedCarPart, viewModel.userPickedPart)
                     //CarPartFacts("Android" , parts, parts, viewModel.selectedPart)
                 }
             }
@@ -58,16 +70,25 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun CarPartFacts(name: String, parts: List<Part> = ArrayList<Part>(), specificCarPart: List<SpecificCarPart> = ArrayList<SpecificCarPart>(), userPickedPart : SpecificCarPart = SpecificCarPart()) {
-        var carPartName by remember(userPickedPart.partId)  { mutableStateOf(userPickedPart.thisPartName) }
+    fun CarPartFacts(
+        name: String,
+        parts: List<Part> = ArrayList<Part>(),
+        specificCarPart: List<SpecificCarPart> = ArrayList<SpecificCarPart>(),
+        userPickedPart: SpecificCarPart = SpecificCarPart()
+    ) {
+        var carPartName by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartName) }
         var carPartModel by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartModel) }
         var carPartBrand by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartBrand) }
-        var carMake by remember (userPickedPart.partId)     { mutableStateOf(userPickedPart.thisPartsCarMake) }
-        var carPartPrice by remember (userPickedPart.partId){ mutableStateOf(userPickedPart.thisPartPrice) }
+        var carMake by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartsCarMake) }
+        var carPartPrice by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartPrice) }
         val context = LocalContext.current
         Column {
             CarPartSpinner(specifiedCarParts = specificCarPart)
-            TextFieldWithDropdownUsage(dataIn = parts, stringResource(R.string.partName), userPickedPart)
+            TextFieldWithDropdownUsage(
+                dataIn = parts,
+                stringResource(R.string.partName),
+                userPickedPart
+            )
             OutlinedTextField(
                 value = carPartName,
                 onValueChange = { carPartName = it },
@@ -100,18 +121,18 @@ class MainActivity : ComponentActivity() {
             )
             Button(
                 onClick = {
-                    var specificCarPart = SpecificCarPart().apply {
+                    userPickedPart.apply {
                         thisPartName = carPartName
                         thisPartModel = carPartModel
                         thisPartBrand = carPartBrand
                         thisPartsCarMake = carMake
                         thisPartPrice = carPartPrice
 
-                        partId = selectedPart?.let{
+                        partId = selectedPart?.let {
                             it.partIdFinal
-                        }?: 0
+                        } ?: 0
                     }
-                    viewModel.save(specificCarPart)
+                    viewModel.saveNewPart()
                     Toast.makeText(
                         context,
                         "$carPartName $carPartModel $carPartBrand $carMake $carPartPrice",
@@ -121,12 +142,23 @@ class MainActivity : ComponentActivity() {
                 content = { Text(text = "Save") }
             )
 
+            Button(
+                onClick = {
+                    signIn()
+
+                }
+            ) {
+                Text(text = "Log on")
+            }
         }
+
     }
+
+
     @Composable
-    fun CarPartSpinner (specifiedCarParts: List<SpecificCarPart>){
-        var carPartText by remember {mutableStateOf("My Car Inventory")}
-        var expanded by remember { mutableStateOf(false)}
+    fun CarPartSpinner(specifiedCarParts: List<SpecificCarPart>) {
+        var carPartText by remember { mutableStateOf("My Car Inventory") }
+        var expanded by remember { mutableStateOf(false) }
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Row(Modifier.padding(26.dp)
                 .clickable {
@@ -135,18 +167,31 @@ class MainActivity : ComponentActivity() {
                 .padding(8.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
-            ){
+            ) {
                 Text(text = carPartText, fontSize = 20.sp, modifier = Modifier.padding(end = 8.dp))
                 Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = "")
-                DropdownMenu(expanded = expanded, onDismissRequest = {expanded = false}){
-                    specifiedCarParts.forEach {
-                        specificCarPart-> DropdownMenuItem(onClick = {
-                           expanded = false
-                        carPartText = specificCarPart.toString()
-                        userPickedPart = specificCarPart
-                    }) {
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    specifiedCarParts.forEach { specificCarPart ->
+                        DropdownMenuItem(onClick = {
+                            expanded = false
+
+                            if (specificCarPart.thisPartName == viewModel.NEWLY_CREATED_PART) {
+                                //user is created a list item of part
+                                carPartText = ""
+                                specificCarPart.thisPartName = ""
+                            } else {
+                                //part exists already
+                                carPartText = specificCarPart.toString()
+                                selectedPart =
+                                    Part(name = "", model = "", make = "", brand = "", price = "")
+                                inPartName = specificCarPart.thisPartName
+                            }
+                            viewModel.userPickedPart = specificCarPart
+
+
+                        }) {
                             Text(text = specificCarPart.toString())
-                    }
+                        }
                     }
                 }
             }
@@ -154,9 +199,14 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun TextFieldWithDropdownUsage(dataIn: List<Part>, label: String = "", userPickedPart: SpecificCarPart) {
+    fun TextFieldWithDropdownUsage(
+        dataIn: List<Part>,
+        label: String = "",
+        userPickedPart: SpecificCarPart
+    ) {
         val dropDownOptions = remember { mutableStateOf(listOf<Part>()) }
-        val textFieldValue = remember(userPickedPart.partId) { mutableStateOf(TextFieldValue(userPickedPart.thisPartName)) }
+        val textFieldValue =
+            remember(userPickedPart.partId) { mutableStateOf(TextFieldValue(userPickedPart.thisPartName)) }
         val dropDownExpanded = remember { mutableStateOf(false) }
 
         fun onDropdownDismissRequest() {
@@ -183,12 +233,12 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-   @Composable
+    @Composable
     fun TextFieldWithDropdown(
         modifier: Modifier = Modifier,
         value: TextFieldValue,
-        setValue: (TextFieldValue)-> Unit,
-        onDismissRequest: ()-> Unit,
+        setValue: (TextFieldValue) -> Unit,
+        onDismissRequest: () -> Unit,
         dropDownExpanded: Boolean,
         list: List<Part>,
         label: String = ""
@@ -215,7 +265,7 @@ class MainActivity : ComponentActivity() {
                 ),
                 onDismissRequest = onDismissRequest
             ) {
-                list.forEach { text->
+                list.forEach { text ->
                     DropdownMenuItem(onClick = {
                         setValue(
                             TextFieldValue(
@@ -234,8 +284,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-
     @Preview(name = "Light Mode", showBackground = true)
     @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true, name = "Dark Mode")
     @Composable
@@ -249,4 +297,37 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun signIn() {
+        val providers = arrayListOf(
+            AuthUI.IdpConfig.EmailBuilder().build(),
+            AuthUI.IdpConfig.GoogleBuilder().build()
+
+        )
+        val signinIntent = AuthUI.getInstance()
+            .createSignInIntentBuilder()
+            .setAvailableProviders(providers)
+            .build()
+
+        signInLauncher.launch(signinIntent)
+    }
+
+    private val signInLauncher = registerForActivityResult(
+        FirebaseAuthUIActivityResultContract()
+    ) { res ->
+        this.signInResult(res)
+    }
+
+        private fun signInResult(result: FirebaseAuthUIAuthenticationResult){
+            val response = result.idpResponse
+            if(result.resultCode == RESULT_OK){
+                fireBaseUser = FirebaseAuth.getInstance().currentUser
+                fireBaseUser?.let {
+                    val user = User(it.uid, it.displayName)
+                    viewModel.user =user
+                    viewModel.saveUser()
+                    viewModel.listenToParts()
+                }
+            } else {
+                Log.e("MainAcitivity.kt", "Error with Log on" + response?.error?.errorCode) } }
 }

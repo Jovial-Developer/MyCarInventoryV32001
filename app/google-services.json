@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "584989367051-g9s3lng4eknkghdo3n2jrg55f5594k0i.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mycarinventory",
+            "certificate_hash": "2da1c8a681a48b03d45543646578dc9d8371a8bd"
+          }
+        },
+        {
           "client_id": "584989367051-u70v5vb9f2056qf9rffeivvjcb246ufi.apps.googleusercontent.com",
           "client_type": 3
         }
