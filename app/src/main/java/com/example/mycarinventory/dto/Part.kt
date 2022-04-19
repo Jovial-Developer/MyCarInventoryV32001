@@ -7,7 +7,8 @@ data class Part(
     @SerializedName("Model")var model : String,
     @SerializedName("Brand")var brand : String,
     @SerializedName("Make")var make : String,
-    @SerializedName("Price")var price : String,)
+    @SerializedName("Price")var price : String,
+    @SerializedName("ID")var partIdFinal : Int = 0)
 {
     override fun toString(): String {
         return name

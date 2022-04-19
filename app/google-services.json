@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "584989367051",
+    "project_id": "my-car-inventory",
+    "storage_bucket": "my-car-inventory.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:584989367051:android:e9e457bc09c262f03c200e",
+        "android_client_info": {
+          "package_name": "com.example.mycarinventory"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "584989367051-u70v5vb9f2056qf9rffeivvjcb246ufi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6hczklmBCQYpoQ7kia_tbYscUcv0ZUNA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "584989367051-u70v5vb9f2056qf9rffeivvjcb246ufi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

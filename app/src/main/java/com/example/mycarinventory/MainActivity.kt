@@ -5,12 +5,11 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
@@ -25,14 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupProperties
 import com.example.mycarinventory.dto.Part
+import com.example.mycarinventory.dto.SpecificCarPart
 import com.example.mycarinventory.ui.theme.MyCarInventoryTheme
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: MainViewModel by viewModel<MainViewModel>()
-    private var strSelectedData: String = ""
+    private var userPickedPart: SpecificCarPart by mutableStateOf(SpecificCarPart())
     private var selectedPart: Part? = null
+    private val viewModel: MainViewModel by viewModel<MainViewModel>()
+    private var inPartName: String = ""
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +42,7 @@ class MainActivity : ComponentActivity() {
             viewModel.fetchParts()
             //temp data
             val parts by viewModel.parts.observeAsState(initial = emptyList())
+            val specifiedCarPart by viewModel.specifiedCarPart.observeAsState(initial = emptyList())
 
             MyCarInventoryTheme {
                 // A surface container using the 'background' color from the theme
@@ -47,7 +50,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    CarPartFacts("Android", parts)
+                    CarPartFacts("Android", parts, specifiedCarPart, userPickedPart)
                     //CarPartFacts("Android" , parts, parts, viewModel.selectedPart)
                 }
             }
@@ -55,15 +58,16 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun CarPartFacts(name: String, parts: List<Part> = ArrayList<Part>()) {
-        var carPartName by remember { mutableStateOf(" ") }
-        var carPartModel by remember { mutableStateOf("") }
-        var carPartBrand by remember { mutableStateOf("") }
-        var carMake by remember { mutableStateOf("") }
-        var carPartPrice by remember { mutableStateOf("") }
+    fun CarPartFacts(name: String, parts: List<Part> = ArrayList<Part>(), specificCarPart: List<SpecificCarPart> = ArrayList<SpecificCarPart>(), userPickedPart : SpecificCarPart = SpecificCarPart()) {
+        var carPartName by remember(userPickedPart.partId)  { mutableStateOf(userPickedPart.thisPartName) }
+        var carPartModel by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartModel) }
+        var carPartBrand by remember(userPickedPart.partId) { mutableStateOf(userPickedPart.thisPartBrand) }
+        var carMake by remember (userPickedPart.partId)     { mutableStateOf(userPickedPart.thisPartsCarMake) }
+        var carPartPrice by remember (userPickedPart.partId){ mutableStateOf(userPickedPart.thisPartPrice) }
         val context = LocalContext.current
         Column {
-            TextFieldWithDropdownUsage(dataIn = parts, stringResource(R.string.partName))
+            CarPartSpinner(specifiedCarParts = specificCarPart)
+            TextFieldWithDropdownUsage(dataIn = parts, stringResource(R.string.partName), userPickedPart)
             OutlinedTextField(
                 value = carPartName,
                 onValueChange = { carPartName = it },
@@ -96,6 +100,18 @@ class MainActivity : ComponentActivity() {
             )
             Button(
                 onClick = {
+                    var specificCarPart = SpecificCarPart().apply {
+                        thisPartName = carPartName
+                        thisPartModel = carPartModel
+                        thisPartBrand = carPartBrand
+                        thisPartsCarMake = carMake
+                        thisPartPrice = carPartPrice
+
+                        partId = selectedPart?.let{
+                            it.partIdFinal
+                        }?: 0
+                    }
+                    viewModel.save(specificCarPart)
                     Toast.makeText(
                         context,
                         "$carPartName $carPartModel $carPartBrand $carMake $carPartPrice",
@@ -107,11 +123,40 @@ class MainActivity : ComponentActivity() {
 
         }
     }
+    @Composable
+    fun CarPartSpinner (specifiedCarParts: List<SpecificCarPart>){
+        var carPartText by remember {mutableStateOf("My Car Inventory")}
+        var expanded by remember { mutableStateOf(false)}
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Row(Modifier.padding(26.dp)
+                .clickable {
+                    expanded = !expanded
+                }
+                .padding(8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Text(text = carPartText, fontSize = 20.sp, modifier = Modifier.padding(end = 8.dp))
+                Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = "")
+                DropdownMenu(expanded = expanded, onDismissRequest = {expanded = false}){
+                    specifiedCarParts.forEach {
+                        specificCarPart-> DropdownMenuItem(onClick = {
+                           expanded = false
+                        carPartText = specificCarPart.toString()
+                        userPickedPart = specificCarPart
+                    }) {
+                            Text(text = specificCarPart.toString())
+                    }
+                    }
+                }
+            }
+        }
+    }
 
     @Composable
-    fun TextFieldWithDropdownUsage(dataIn: List<Part>, label: String = "") {
+    fun TextFieldWithDropdownUsage(dataIn: List<Part>, label: String = "", userPickedPart: SpecificCarPart) {
         val dropDownOptions = remember { mutableStateOf(listOf<Part>()) }
-        val textFieldValue = remember { mutableStateOf(TextFieldValue()) }
+        val textFieldValue = remember(userPickedPart.partId) { mutableStateOf(TextFieldValue(userPickedPart.thisPartName)) }
         val dropDownExpanded = remember { mutableStateOf(false) }
 
         fun onDropdownDismissRequest() {
@@ -119,7 +164,7 @@ class MainActivity : ComponentActivity() {
         }
 
         fun onValueChanged(value: TextFieldValue) {
-            strSelectedData = value.text
+            inPartName = value.text
             dropDownExpanded.value = true
             textFieldValue.value = value
             dropDownOptions.value = dataIn.filter {
@@ -171,7 +216,7 @@ class MainActivity : ComponentActivity() {
                 onDismissRequest = onDismissRequest
             ) {
                 list.forEach { text->
-                    DowpdownMenuItem(onClick = {
+                    DropdownMenuItem(onClick = {
                         setValue(
                             TextFieldValue(
                                 text.toString(),
@@ -180,8 +225,8 @@ class MainActivity : ComponentActivity() {
                         )
                         selectedPart = text
                     }) {
-                        //Text(text = text.toString())
-                    //}
+                        Text(text = text.toString())
+
 
                     }
                 }
@@ -189,10 +234,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    fun DowpdownMenuItem(onClick: () -> Unit, function: () -> Unit) {
 
-    }
 
     @Preview(name = "Light Mode", showBackground = true)
     @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true, name = "Dark Mode")
