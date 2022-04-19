@@ -5,6 +5,6 @@ import retrofit2.Call
 import retrofit2.http.GET
 
 interface IPartDAO {
-    @GET("")
+    @GET("/Jovial-Developer/carInventorydata/main/carpartsjson")
     fun getAllParts() : Call<ArrayList<Part>>
 }
